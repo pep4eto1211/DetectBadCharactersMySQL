@@ -29,6 +29,8 @@ def is_unusual_cp1252(sequence: bytearray):
             return True
     return False
 
+# This only works for a single table and a single column. Once we have decided how we can operationalize this we might have
+# to find a way to automate it so it goes through multiple ones
 @app.command()
 def main(mysql_host: Annotated[str, typer.Argument(help='Host address of the MySQL host')],
     mysql_username: Annotated[str, typer.Argument(help='MySQL username')],
@@ -44,6 +46,7 @@ def main(mysql_host: Annotated[str, typer.Argument(help='Host address of the MyS
     cnx = mysql.connector.connect(user=mysql_username, password=mysql_password, database=database, host=mysql_host)
     cnx.set_charset_collation('latin1')
     cursor = cnx.cursor()
+    # This query is far too simple and we can benefit from narrowing down the number of records scanned as if there is no bookmark column we might to ave go through the entire table
     query = f"SELECT {pk_column}, {offending_column}, convert({offending_column} using binary) as binary_offender FROM {table}"
     if bookmark_column:
         query += f" where {bookmark_column} > '{bookmark_value}'"
@@ -52,6 +55,7 @@ def main(mysql_host: Annotated[str, typer.Argument(help='Host address of the MyS
 
     print(f'Running: {query}')
     cursor.execute(query)
+    # Right now this only prints stuff but we might want to be able to also export it
     for (id, value, binary_value) in cursor:
         if is_unusual_cp1252(binary_value):
             ids.append(id)
